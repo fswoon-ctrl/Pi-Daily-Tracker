@@ -228,12 +228,19 @@ let currentType = 'income';
 // ── Pi AUTH ──
 function loginWithPi() {
   try {
-    Pi.init({ version:'2.0', sandbox:true });
+    Pi.init({ version:'2.0', sandbox:false });
     Pi.authenticate(['username'], p => p.complete().catch(()=>{}))
       .then(a => showApp(a.user.username)).catch(() => demoLogin());
   } catch(e) { demoLogin(); }
 }
 function demoLogin() { showApp('Guest User'); }
+
+// Auto-authenticate if running inside Pi Browser
+window.addEventListener('load', () => {
+  if (typeof Pi !== 'undefined') {
+    loginWithPi();
+  }
+});
 
 function showApp(username) {
   document.getElementById('loginScreen').style.display = 'none';
