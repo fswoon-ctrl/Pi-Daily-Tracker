@@ -230,16 +230,31 @@ function loginWithPi() {
   try {
     Pi.init({ version:'2.0', sandbox:false });
     Pi.authenticate(['username'], p => p.complete().catch(()=>{}))
-      .then(a => showApp(a.user.username)).catch(() => demoLogin());
-  } catch(e) { demoLogin(); }
+      .then(a => showApp(a.user.username))
+      .catch(err => {
+        console.warn('Pi auth failed:', err);
+        demoLogin();
+      });
+  } catch(e) {
+    console.warn('Pi SDK error:', e);
+    demoLogin();
+  }
 }
 function demoLogin() { showApp('Guest User'); }
 
-// Auto-authenticate if running inside Pi Browser
-window.addEventListener('load', () => {
+// Wait for Pi SDK to fully load before authenticating
+function tryPiLogin(attempts) {
   if (typeof Pi !== 'undefined') {
     loginWithPi();
+  } else if (attempts > 0) {
+    setTimeout(() => tryPiLogin(attempts - 1), 500);
+  } else {
+    demoLogin();
   }
+}
+
+window.addEventListener('load', () => {
+  setTimeout(() => tryPiLogin(10), 300);
 });
 
 function showApp(username) {
