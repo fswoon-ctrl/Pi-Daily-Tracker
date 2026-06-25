@@ -108,8 +108,9 @@
     <div class="logo">π</div>
     <h2>Pi Expense Tracker</h2>
     <p>Track your daily income &amp; expenses simply and easily.</p>
-    <button class="btn-pi" onclick="loginWithPi()">🔐 Login with Pi</button>
+    <button class="btn-pi" id="btnLogin" onclick="loginWithPi()">🔐 Login with Pi</button>
     <button class="btn-pi btn-demo" onclick="demoLogin()">Try Demo (No Pi)</button>
+    <p id="loginStatus" style="margin-top:14px;font-size:14px;color:#888;"></p>
   </div>
 </div>
 
@@ -226,35 +227,46 @@ let editingId   = null;
 let currentType = 'income';
 
 // ── Pi AUTH ──
+function setStatus(msg) {
+  const el = document.getElementById('loginStatus');
+  if (el) el.textContent = msg;
+}
+
 function loginWithPi() {
+  setStatus('Connecting to Pi Network…');
   try {
-    Pi.init({ version:'2.0', sandbox:false });
-    Pi.authenticate(['username'], p => p.complete().catch(()=>{}))
-      .then(a => showApp(a.user.username))
+    Pi.init({ version: '2.0', sandbox: false });
+    const scopes = ['username', 'payments'];
+    Pi.authenticate(scopes, onIncompletePaymentFound)
+      .then(auth => {
+        setStatus('');
+        showApp(auth.user.username);
+      })
       .catch(err => {
-        console.warn('Pi auth failed:', err);
-        demoLogin();
+        console.warn('Pi authenticate failed:', err);
+        setStatus('Pi login failed. Please try again.');
       });
   } catch(e) {
-    console.warn('Pi SDK error:', e);
-    demoLogin();
+    console.warn('Pi SDK not available:', e);
+    setStatus('Pi SDK not detected.');
   }
 }
+
+function onIncompletePaymentFound(payment) {
+  console.log('Incomplete payment found:', payment);
+}
+
 function demoLogin() { showApp('Guest User'); }
 
-// Wait for Pi SDK to fully load before authenticating
-function tryPiLogin(attempts) {
-  if (typeof Pi !== 'undefined') {
-    loginWithPi();
-  } else if (attempts > 0) {
-    setTimeout(() => tryPiLogin(attempts - 1), 500);
-  } else {
-    demoLogin();
-  }
-}
-
+// Auto-trigger Pi login if inside Pi Browser
 window.addEventListener('load', () => {
-  setTimeout(() => tryPiLogin(10), 300);
+  setTimeout(() => {
+    if (typeof Pi !== 'undefined') {
+      loginWithPi();
+    } else {
+      setStatus('Open in Pi Browser to login with Pi.');
+    }
+  }, 500);
 });
 
 function showApp(username) {
